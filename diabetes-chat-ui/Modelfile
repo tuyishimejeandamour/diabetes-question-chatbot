@@ -1,0 +1,36 @@
+# Ollama Modelfile — Diabetes Medical Chatbot (Fine-Tuned)
+#
+# Uses YOUR fine-tuned Gemma 3 1B QLoRA model (converted to GGUF).
+#
+# ── One-time setup ───────────────────────────────────────────────────────────
+# Step 1: In the notebook set MERGE_MODEL=True and re-run the save cell.
+#         This writes the merged weights to: ../gemma3-diabetes-chatbot/merged-model/
+#
+# Step 2: Convert to GGUF with llama.cpp:
+#   git clone https://github.com/ggerganov/llama.cpp
+#   cd llama.cpp && pip install -r requirements.txt
+#   python convert_hf_to_gguf.py ../gemma3-diabetes-chatbot/merged-model \
+#          --outtype q4_k_m \
+#          --outfile ../diabetes-chat-ui/gemma3-diabetes-q4.gguf
+#   cd ..
+#
+# Step 3: Register the model with Ollama (run once):
+#   ollama create diabetes-chatbot -f diabetes-chat-ui/Modelfile
+#
+# Step 4: Start Ollama and the React app:
+#   ollama serve
+#   cd diabetes-chat-ui && npm run dev
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Path to the GGUF file produced in Step 2 above.
+FROM ./gemma3-diabetes-q4.gguf
+
+SYSTEM """You are a knowledgeable and compassionate diabetes medical assistant. \
+Answer the user's questions accurately and concisely using evidence-based \
+medical information. Always recommend consulting a healthcare professional \
+for personalised medical advice."""
+
+PARAMETER temperature    0.7
+PARAMETER top_p          0.9
+PARAMETER repeat_penalty 1.1
+PARAMETER num_predict    256
