@@ -1,5 +1,7 @@
 # Domain-Specific LLM Assistant: Diabetes Medical Q&A (Gemma 3 + QLoRA)
 
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/14YMiKOwn2ZwOoi2CSJyF0XUP27fzsOKk?usp=sharing)
+
 This project fine-tunes a pre-trained Hugging Face LLM to create a **domain-specific healthcare assistant** focused on diabetes education and support.
 
 ## Project Summary
