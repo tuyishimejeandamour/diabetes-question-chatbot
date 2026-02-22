@@ -39,7 +39,7 @@ base_model = AutoModelForCausalLM.from_pretrained(
 print(f"Attaching LoRA adapter from {ADAPTER_ID} …")
 model = PeftModel.from_pretrained(base_model, ADAPTER_ID)
 model.eval()
-print("✅ Model ready.")
+print(" Model ready.")
 
 
 # ── Inference helper ─────────────────────────────────────────────────────────
