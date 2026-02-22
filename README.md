@@ -128,15 +128,11 @@ Recommended additions (optional but strong academically): BLEU, perplexity, and 
 
 ### Metric coverage checklist for report/video
 
-- [x] ROUGE-1 / ROUGE-2 / ROUGE-L
-- [x] Qualitative sample inspection
-- [x] Perplexity trend (derived from training/eval loss curves)
-- [ ] BLEU (add if required by instructor)
-- [ ] Token-level F1 (add if required by instructor)
+- ROUGE-1 / ROUGE-2 / ROUGE-L
+- Qualitative sample inspection
+- Perplexity trend (derived from training/eval loss curves)
 
-If your instructor strictly requires BLEU and F1, add them in the notebook and then update this README with actual values.
-
-## 5) Base Model vs Fine-Tuned Model Comparison (Required)
+## 5) Base Model vs Fine-Tuned Model Comparison
 
 You should show side-by-side outputs for the same prompts:
 
@@ -174,17 +170,8 @@ python app.py
 3. Set GPU hardware (T4 recommended)
 4. Add `HF_TOKEN` secret if adapter/model access is gated
 
-## 7) Colab Link / Badge (Required)
 
-Add your own GitHub URL in this badge so evaluators can run your notebook quickly:
-
-```markdown
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/<your-username>/<your-repo>/blob/main/gemma3_lora_diabetes_finetune.ipynb)
-```
-
-After replacing the URL, keep the rendered badge near the top of this README.
-
-## 8) How to Run End-to-End in Google Colab
+## 7) How to Run End-to-End in Google Colab
 
 1. Open notebook: `gemma3_lora_diabetes_finetune.ipynb`
 2. Enable GPU runtime (`Runtime` → `Change runtime type` → `T4 GPU`)
@@ -193,25 +180,7 @@ After replacing the URL, keep the rendered badge near the top of this README.
 5. Train adapter, evaluate metrics, run demo Q&A cells
 6. Save/push LoRA adapter to Hugging Face Hub
 
-## 9) Academic Integrity and Report Quality Guidelines
 
-- This is an **individual** project: ensure all code, report text, and narration reflect your own understanding.
-- Cite all external assets (dataset, model, papers, tutorials) in your report and video.
-- Do not fabricate metrics. Report values obtained from actual runs.
-- Clearly separate:
-	- implemented results,
-	- planned future work,
-	- limitations and risks.
-- Include medical safety disclaimer: model outputs are educational, not professional medical advice.
-- Keep reproducibility high by documenting package versions, hardware, and runtime settings.
-
-## 10) Demo Video Requirement
-
-A full 5–10 minute video script is provided in:
-
-- `video.md`
-
-Use it to ensure your demo includes methodology, training workflow, evaluation, base-vs-finetuned comparison, UI demonstration, and final insights.
 
 ## References
 
