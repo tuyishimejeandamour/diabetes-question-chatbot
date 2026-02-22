@@ -4,6 +4,19 @@
 
 This project fine-tunes a pre-trained Hugging Face LLM to create a **domain-specific healthcare assistant** focused on diabetes education and support.
 
+## Problem Statement
+
+People living with diabetes often need fast, understandable, and context-relevant answers about symptoms, nutrition, medication routines, sick-day management, and risk prevention. General-purpose chatbots may produce answers that are too generic, inconsistent, or not sufficiently adapted to diabetes-specific needs. This creates a gap between available AI tools and practical patient-education use cases.
+
+## Mission
+
+Build and deploy a domain-specific diabetes assistant by fine-tuning Gemma 3 1B with QLoRA so that it can:
+
+- Provide clearer and more relevant diabetes-focused responses than the base model.
+- Support educational use through safe, concise, and conversational answers.
+- Run efficiently on limited hardware (for example, free Colab GPU) using PEFT methods.
+- Demonstrate measurable improvement through documented experiments and evaluation metrics.
+
 ## Project Summary
 
 - **Domain:** Healthcare (Diabetes)
