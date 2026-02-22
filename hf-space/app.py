@@ -1,14 +1,4 @@
-"""
-Gradio Space — Diabetes Medical Chatbot
-Loads the fine-tuned Gemma 3 1B LoRA adapter from Hugging Face Hub.
 
-Deploy this folder as a Hugging Face Space (SDK: gradio).
-Make sure to:
-  1. Set the HF_TOKEN secret in Space settings if your adapter repo is private.
-  2. Choose a GPU hardware tier (T4 small or better).
-"""
-
-import os
 import torch
 import gradio as gr
 from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
@@ -42,7 +32,7 @@ base_model = AutoModelForCausalLM.from_pretrained(
     BASE_MODEL_ID,
     quantization_config=bnb_config if torch.cuda.is_available() else None,
     device_map="auto" if torch.cuda.is_available() else "cpu",
-    torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32,
+    dtype=torch.float16 if torch.cuda.is_available() else torch.float32,
     trust_remote_code=True,
 )
 
@@ -53,28 +43,58 @@ print("✅ Model ready.")
 
 
 # ── Inference helper ─────────────────────────────────────────────────────────
-def build_prompt(history: list[dict], user_message: str) -> str:
-    """Convert Gradio message history + new user turn into a Gemma chat prompt."""
+def _parse_history_message(message_item):
+    """Normalize one history item from Gradio into (role, content)."""
+    if isinstance(message_item, dict):
+        return message_item.get("role"), message_item.get("content")
+
+    if isinstance(message_item, (list, tuple)) and len(message_item) >= 2:
+        return message_item[0], message_item[1]
+
+    role = getattr(message_item, "role", None)
+    content = getattr(message_item, "content", None)
+    return role, content
+
+
+def build_prompt(history: list | None, user_message: str) -> str:
+    """Build a Gemma prompt from Gradio history and the latest user message."""
     prompt = ""
-    for turn in history:
-        if turn["role"] == "user":
-            prompt += f"<start_of_turn>user\n{SYSTEM_PROMPT}\n\n{turn['content']}\n<end_of_turn>\n"
-        else:
-            prompt += f"<start_of_turn>model\n{turn['content']}\n<end_of_turn>\n"
-    prompt += f"<start_of_turn>user\n{SYSTEM_PROMPT}\n\n{user_message}\n<end_of_turn>\n<start_of_turn>model\n"
+
+    for item in history or []:
+        role, content = _parse_history_message(item)
+        if not content:
+            continue
+
+        role = (role or "").lower()
+        if role in {"user", "human"}:
+            prompt += f"<start_of_turn>user\n{SYSTEM_PROMPT}\n\n{content}\n<end_of_turn>\n"
+        elif role in {"assistant", "model", "bot"}:
+            prompt += f"<start_of_turn>model\n{content}\n<end_of_turn>\n"
+
+    prompt += (
+        f"<start_of_turn>user\n{SYSTEM_PROMPT}\n\n{user_message}\n"
+        f"<end_of_turn>\n<start_of_turn>model\n"
+    )
     return prompt
 
 
 def respond(
     message: str,
-    history: list[dict],
-    max_new_tokens: int,
-    temperature: float,
-    top_p: float,
-):
+    history: list | None,
+    # Remove arguments that are no longer passed by ChatInterface
+) -> str:
+    # Set default generation parameters since we removed the sliders
+    max_new_tokens = 256
+    temperature = 0.7
+    top_p = 0.9
+
     prompt = build_prompt(history, message)
     inputs = tokenizer(prompt, return_tensors="pt", truncation=True, max_length=1024)
-    inputs = {k: v.to(model.device) for k, v in inputs.items()}
+
+    target_device = getattr(model, "device", None)
+    if target_device is None:
+        target_device = next(model.parameters()).device
+    inputs = {k: v.to(target_device) for k, v in inputs.items()}
 
     with torch.no_grad():
         output_ids = model.generate(
@@ -92,50 +112,187 @@ def respond(
     return tokenizer.decode(generated_ids, skip_special_tokens=True).strip()
 
 
-# ── Gradio UI ────────────────────────────────────────────────────────────────
-with gr.Blocks(
-    theme=gr.themes.Soft(primary_hue="blue", secondary_hue="sky"),
-    title="Diabetes Medical Chatbot",
-    css="""
-        .disclaimer { background: #fff3cd; border-left: 4px solid #ffc107;
-                      padding: 10px 16px; border-radius: 4px; margin-bottom: 12px; }
-        footer { display: none !important; }
-    """,
-) as demo:
-    gr.Markdown(
-        """
-        # 🩺 Diabetes Medical Chatbot
-        Fine-tuned **Gemma 3 1B** (QLoRA) · [`tuyishimejeand/gemma3-1b-diabetes-lora`](https://huggingface.co/tuyishimejeand/gemma3-1b-diabetes-lora)
-        """
-    )
-    gr.HTML(
-        '<div class="disclaimer">⚠️ <strong>Disclaimer:</strong> This chatbot is for '
-        "educational purposes only and must <strong>not</strong> replace professional "
-        "medical advice, diagnosis, or treatment.</div>"
-    )
+# ── Custom CSS ───────────────────────────────────────────────────────────────
+CUSTOM_CSS = """
+/* 1. FORCE LIGHT THEME GLOBALLY */
+:root, body, .gradio-container, .dark, .light {
+    background-color: #ffffff !important;
+    color: #1f2937 !important;
+    --background-fill-primary: #ffffff !important;
+    --background-fill-secondary: #ffffff !important;
+    --body-background-fill: #ffffff !important;
+    --body-text-color: #1f2937 !important;
+    --color-accent-soft: #f3f4f6 !important;
+    --border-color-primary: #e5e7eb !important;
+}
 
-    chat = gr.ChatInterface(
+/* 2. LAYOUT & WIDTH */
+.gradio-container {
+    max-width: 1000px !important;
+    margin: 0 auto !important;
+    padding-top: 2rem !important;
+}
+
+/* 3. HEADER */
+.header-title {
+    border-bottom: 1px solid #e5e7eb !important;
+    margin-bottom: 1rem !important;
+    padding-bottom: 0.5rem !important;
+}
+.header-title h3 {
+    color: #000000 !important;
+    font-weight: 600 !important;
+    margin: 0 !important;
+}
+
+/* 4. CHATBOT CONTAINER */
+#chatbot {
+    height: 70vh !important;
+    min-height: 500px !important;
+    background-color: #ffffff !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+/* Hide the default "Chatbot" label */
+#chatbot > .label-wrap { display: none !important; }
+
+/* 5. MESSAGE BUBBLES */
+/* The wrapper around messages */
+.bubble-wrap {
+    background-color: #ffffff !important;
+    padding: 0 !important;
+}
+
+/* User message bubble */
+.message.user {
+    background-color: #f3f4f6 !important; /* Light gray */
+    border: 1px solid #e5e7eb !important;
+    border-radius: 12px 12px 2px 12px !important;
+    color: #111827 !important;
+    padding: 12px 16px !important;
+    margin-left: auto !important; /* Align right */
+    max-width: 80% !important;
+}
+
+/* Bot message bubble */
+.message.bot {
+    background-color: #ffffff !important; /* White */
+    border: none !important;
+    color: #374151 !important;
+    padding: 12px 0 !important;
+    margin-right: auto !important; /* Align left */
+    max-width: 90% !important;
+    box-shadow: none !important;
+}
+
+/* 6. EXAMPLES (The buttons below the chat) */
+/* Target the container and the buttons aggressively */
+.examples, .examples-container, div[data-testid="examples"] {
+    background-color: #ffffff !important;
+    border: none !important;
+}
+.examples button, div[data-testid="examples"] button, .gallery-item {
+    background-color: #ffffff !important;
+    color: #374151 !important;
+    border: 1px solid #e5e7eb !important;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05) !important;
+    border-radius: 8px !important;
+    padding: 8px 16px !important;
+    font-size: 0.9rem !important;
+    margin: 4px !important;
+}
+.examples button:hover, div[data-testid="examples"] button:hover, .gallery-item:hover {
+    background-color: #f9fafb !important;
+    border-color: #d1d5db !important;
+}
+
+/* 7. INPUT AREA */
+/* The row containing the textbox and button */
+.gradio-row:has(textarea), .form {
+    background-color: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 24px !important;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
+    padding: 6px 12px !important;
+    margin-top: 10px !important;
+    align-items: center !important;
+    display: flex !important;
+}
+
+/* The actual text input */
+textarea {
+    background-color: transparent !important;
+    border: none !important;
+    box-shadow: none !important; 
+    resize: none !important; 
+    padding: 8px !important;
+    color: #111827 !important;
+}
+textarea::placeholder {
+    color: #9ca3af !important;
+}
+
+/* Send Button */
+button.primary, button#component-10 { /* Fallback ID targeting */
+    background-color: #000000 !important;
+    color: #ffffff !important;
+    border-radius: 50% !important;
+    width: 36px !important;
+    height: 36px !important;
+    min-width: 36px !important; 
+    padding: 0 !important;
+    box-shadow: none !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border: none !important;
+}
+button.primary:hover {
+    background-color: #333333 !important;
+}
+
+/* 8. CLEANUP */
+footer { display: none !important; }
+.block { border: none !important; background: transparent !important; box-shadow: none !important; }
+"""
+
+# ── Gradio UI ────────────────────────────────────────────────────────────────
+with gr.Blocks(title="Diabetes Agent", css=CUSTOM_CSS, theme=gr.themes.Default(neutral_hue="slate")) as demo:
+    
+    # Header
+    with gr.Row(elem_classes=["header-title"]):
+        gr.Markdown("### ⚫ Diabetes Agent")
+
+    # ── Chat interface ───────────────────────────────────────────────────────
+    chat_interface = gr.ChatInterface(
         fn=respond,
-        type="messages",
-        additional_inputs=[
-            gr.Slider(64, 512, value=256, step=32, label="Max new tokens"),
-            gr.Slider(0.0, 1.0, value=0.7, step=0.05, label="Temperature"),
-            gr.Slider(0.1, 1.0, value=0.9, step=0.05, label="Top-p"),
-        ],
-        additional_inputs_accordion=gr.Accordion("⚙️ Generation settings", open=False),
+        textbox=gr.Textbox(
+            placeholder="Type your question here...",
+            show_label=False,
+            container=False, # Replaces lines=1, max_lines=5 logic often used
+            scale=7,
+            autofocus=True,
+        ),
+        # minimal interface
         examples=[
-            "What are the early symptoms of type 2 diabetes?",
-            "How should I manage my blood sugar when I am sick?",
-            "What foods should a person with diabetes avoid?",
-            "What is HbA1c and what does my result mean?",
-            "How does regular exercise affect blood glucose levels?",
-            "What should I include in a diabetes emergency kit?",
+            ["What are the early symptoms of type 2 diabetes?"],
+            ["How should I manage my blood sugar when I am sick?"],
+            ["What foods should a person with diabetes avoid?"],
         ],
         cache_examples=False,
-        submit_btn="Send",
-        retry_btn="🔁 Retry",
-        undo_btn="↩ Undo",
-        clear_btn="🗑️ Clear",
+        submit_btn="➤", 
+    )
+
+    # Customize the internal chatbot component
+    chat_interface.chatbot.elem_id = "chatbot"
+    chat_interface.chatbot.show_label = False
+    chat_interface.chatbot.avatar_images = (None, None) # No avatars for cleaner look
+    
+    # Custom placeholder
+    chat_interface.chatbot.placeholder = (
+        "<div style='text-align:center; padding-top: 100px; color: #9ca3af;'>"
+        "<p>I can help you understand diabetes data and management.</p>"
+        "</div>"
     )
 
 if __name__ == "__main__":

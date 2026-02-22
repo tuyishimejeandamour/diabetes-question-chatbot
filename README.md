@@ -1,0 +1,170 @@
+# Domain-Specific LLM Assistant: Diabetes Medical Q&A (Gemma 3 + QLoRA)
+
+This project fine-tunes a pre-trained Hugging Face LLM to create a **domain-specific healthcare assistant** focused on diabetes education and support.
+
+## Project Summary
+
+- **Domain:** Healthcare (Diabetes)
+- **Task Type:** Generative Question Answering (instruction-response chatbot)
+- **Base Model:** `google/gemma-3-1b-it`
+- **Fine-Tuning Method:** QLoRA (4-bit quantization + LoRA via `peft`)
+- **Dataset:** `abdelhakimDZ/diabetes_QA_dataset`
+- **Deployment:** Gradio app (Hugging Face Space in `hf-space/`)
+
+## Repository Structure
+
+```text
+.
+├── gemma3_lora_diabetes_finetune.ipynb   # End-to-end Colab/Kaggle-friendly training pipeline
+├── main.py                               # Placeholder script (not used for core training)
+├── pyproject.toml
+├── README.md
+└── hf-space/
+		├── app.py                            # Gradio inference app
+		├── README.md                         # HF Space metadata and deployment notes
+		└── requirements.txt
+```
+
+
+## 1) Dataset and Preprocessing
+
+Dataset is loaded from Hugging Face:
+
+- `abdelhakimDZ/diabetes_QA_dataset`
+
+The notebook performs:
+
+1. Missing-value removal
+2. Duplicate Q&A removal
+3. Text normalization (strip/cleanup)
+4. Prompt construction in Gemma chat format
+5. Train/validation split (default 90/10)
+
+Prompt template used during training:
+
+```text
+<start_of_turn>user
+{system_prompt}
+
+{question}
+<end_of_turn>
+<start_of_turn>model
+{answer}
+<end_of_turn>
+```
+
+## 2) Fine-Tuning Methodology (PEFT / LoRA)
+
+The notebook `gemma3_lora_diabetes_finetune.ipynb` implements QLoRA with:
+
+- 4-bit NF4 quantization (`bitsandbytes`)
+- LoRA adapters on attention + MLP projection layers
+- `trl.SFTTrainer` for supervised fine-tuning
+
+Default key hyperparameters:
+
+- `learning_rate = 2e-4`
+- `batch_size = 2`
+- `gradient_accumulation_steps = 4` (effective batch size = 8)
+- `num_train_epochs = 3`
+- `max_seq_length = 512`
+- `lora_r = 4`, `lora_alpha = 16`, `lora_dropout = 0.05`
+
+## 3) Hyperparameter Experiment Log (Required)
+
+Use this table to record your experiments and the effect of changes.
+
+| Exp ID | LR | Batch Size | Grad Accum | Epochs | LoRA r | Max Seq Len | GPU Type | Peak GPU Mem (GB) | Train Time (min) | Val Loss | ROUGE-L | Notes |
+|---|---:|---:|---:|---:|---:|---:|---|---:|---:|---:|---:|---|
+| E1 (baseline) | 2e-4 | 2 | 4 | 3 | 4 | 512 | T4 | _fill_ | _fill_ | _fill_ | _fill_ | baseline settings |
+| E2 | 1e-4 | 2 | 4 | 3 | 4 | 512 | T4 | _fill_ | _fill_ | _fill_ | _fill_ | lower LR |
+| E3 | 2e-4 | 2 | 4 | 2 | 8 | 512 | T4 | _fill_ | _fill_ | _fill_ | _fill_ | higher LoRA rank |
+
+Minimum expectation: document at least **3 experiments** and discuss trade-offs.
+
+## 4) Evaluation
+
+Implemented in notebook section **“Evaluate Model Performance”**:
+
+- Quantitative metric: **ROUGE-1, ROUGE-2, ROUGE-L** (mean F1)
+- Qualitative analysis: generated answers vs reference answers
+- Visualizations: training curves and ROUGE score plots
+
+Recommended additions (optional but strong academically): BLEU, perplexity, and error analysis by question type.
+
+## 5) Base Model vs Fine-Tuned Model Comparison (Required)
+
+You should show side-by-side outputs for the same prompts:
+
+| Prompt | Base Model Output (Gemma 3 1B IT) | Fine-Tuned Output (Gemma+LoRA) | Observed Difference |
+|---|---|---|---|
+| Diabetes symptoms question | _fill_ | _fill_ | _fill_ |
+| Sick-day management question | _fill_ | _fill_ | _fill_ |
+| Out-of-domain question | _fill_ | _fill_ | _fill_ |
+
+Include at least one **out-of-domain** prompt to show safe handling behavior.
+
+## 6) Deployment (User Interaction)
+
+The deployment app is in `hf-space/app.py` using Gradio.
+
+### Run locally (for demo)
+
+```bash
+cd hf-space
+pip install -r requirements.txt
+python app.py
+```
+
+### Hugging Face Space deployment
+
+1. Create a new Gradio Space
+2. Upload files from `hf-space/`
+3. Set GPU hardware (T4 recommended)
+4. Add `HF_TOKEN` secret if adapter/model access is gated
+
+## 7) Colab Link / Badge (Required)
+
+Add your own GitHub URL in this badge so evaluators can run your notebook quickly:
+
+```markdown
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/<your-username>/<your-repo>/blob/main/gemma3_lora_diabetes_finetune.ipynb)
+```
+
+After replacing the URL, keep the rendered badge near the top of this README.
+
+## 8) How to Run End-to-End in Google Colab
+
+1. Open notebook: `gemma3_lora_diabetes_finetune.ipynb`
+2. Enable GPU runtime (`Runtime` → `Change runtime type` → `T4 GPU`)
+3. Run cells sequentially from top to bottom
+4. Authenticate Hugging Face (`HF_TOKEN`) for gated model access
+5. Train adapter, evaluate metrics, run demo Q&A cells
+6. Save/push LoRA adapter to Hugging Face Hub
+
+## 9) Academic Integrity and Report Quality Guidelines
+
+- This is an **individual** project: ensure all code, report text, and narration reflect your own understanding.
+- Cite all external assets (dataset, model, papers, tutorials) in your report and video.
+- Do not fabricate metrics. Report values obtained from actual runs.
+- Clearly separate:
+	- implemented results,
+	- planned future work,
+	- limitations and risks.
+- Include medical safety disclaimer: model outputs are educational, not professional medical advice.
+- Keep reproducibility high by documenting package versions, hardware, and runtime settings.
+
+## 10) Demo Video Requirement
+
+A full 5–10 minute video script is provided in:
+
+- `video.md`
+
+Use it to ensure your demo includes methodology, training workflow, evaluation, base-vs-finetuned comparison, UI demonstration, and final insights.
+
+## References
+
+- Hugging Face dataset: <https://huggingface.co/datasets/abdelhakimDZ/diabetes_QA_dataset>
+- Base model: <https://huggingface.co/google/gemma-3-1b-it>
+- LoRA paper: <https://arxiv.org/abs/2106.09685>
+- QLoRA paper: <https://arxiv.org/abs/2305.14314>
