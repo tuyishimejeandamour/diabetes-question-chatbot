@@ -11,6 +11,7 @@ This project fine-tunes a pre-trained Hugging Face LLM to create a **domain-spec
 - **Dataset:** `abdelhakimDZ/diabetes_QA_dataset`
 - **Deployment:** Gradio app (Hugging Face Space in `hf-space/`)
 
+
 ## Repository Structure
 
 ```text
@@ -39,6 +40,14 @@ The notebook performs:
 3. Text normalization (strip/cleanup)
 4. Prompt construction in Gemma chat format
 5. Train/validation split (default 90/10)
+
+### Tokenization and normalization details
+
+- **Tokenizer used:** the model-native tokenizer loaded through `AutoTokenizer` for `google/gemma-3-1b-it`.
+- **Tokenization type:** SentencePiece/subword tokenizer (Gemma family), not WordPiece (WordPiece is typical for BERT-family encoders).
+- **Why this is appropriate:** tokenizer-model alignment avoids vocabulary mismatch and preserves correct special-token behavior for causal generation.
+- **Normalization done:** whitespace stripping, null removal, duplicate removal, and template standardization before tokenization.
+- **Context-window control:** prompts are truncated to configured max length to fit model context safely.
 
 Prompt template used during training:
 
@@ -82,6 +91,16 @@ Use this table to record your experiments and the effect of changes.
 
 Minimum expectation: document at least **3 experiments** and discuss trade-offs.
 
+### How to report improvement correctly
+
+Use this formula for your primary metric (for example ROUGE-L):
+
+```text
+Percent improvement = ((FineTuned - Baseline) / Baseline) * 100
+```
+
+Only report “>=10% improvement” if this computed value is at least 10.
+
 ## 4) Evaluation
 
 Implemented in notebook section **“Evaluate Model Performance”**:
@@ -91,6 +110,16 @@ Implemented in notebook section **“Evaluate Model Performance”**:
 - Visualizations: training curves and ROUGE score plots
 
 Recommended additions (optional but strong academically): BLEU, perplexity, and error analysis by question type.
+
+### Metric coverage checklist for report/video
+
+- [x] ROUGE-1 / ROUGE-2 / ROUGE-L
+- [x] Qualitative sample inspection
+- [x] Perplexity trend (derived from training/eval loss curves)
+- [ ] BLEU (add if required by instructor)
+- [ ] Token-level F1 (add if required by instructor)
+
+If your instructor strictly requires BLEU and F1, add them in the notebook and then update this README with actual values.
 
 ## 5) Base Model vs Fine-Tuned Model Comparison (Required)
 
@@ -107,6 +136,13 @@ Include at least one **out-of-domain** prompt to show safe handling behavior.
 ## 6) Deployment (User Interaction)
 
 The deployment app is in `hf-space/app.py` using Gradio.
+
+User experience features already included:
+
+- Clean single-panel chat layout with example prompts
+- Immediate text input + one-click send
+- Focused diabetes-assistant behavior via system prompt
+- Built-in instructional text for first-time users
 
 ### Run locally (for demo)
 

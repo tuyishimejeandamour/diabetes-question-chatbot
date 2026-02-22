@@ -263,6 +263,15 @@ with gr.Blocks(title="Diabetes Agent", css=CUSTOM_CSS, theme=gr.themes.Default(n
     with gr.Row(elem_classes=["header-title"]):
         gr.Markdown("### ⚫ Diabetes Agent")
 
+    gr.Markdown(
+        """
+        **How to use this assistant**
+        - Ask clear diabetes-related questions (symptoms, diet, medication adherence, lifestyle, prevention).
+        - Use the sample prompts below if you are unsure where to start.
+        - This tool is educational and does not replace professional medical diagnosis or treatment.
+        """
+    )
+
     # ── Chat interface ───────────────────────────────────────────────────────
     chat_interface = gr.ChatInterface(
         fn=respond,
